@@ -1,6 +1,9 @@
-// Copyright 2022 <mzh.scnu@qq.com>. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
+/*
+ * @Author: YangChen
+ * @Date: 2022-11-05 14:38:06
+ * @Last Modified by: YangChen
+ * @Last Modified time: 2022-11-05 14:46:45
+ */
 
 package compressor
 
@@ -18,4 +21,12 @@ const (
 type Compressor interface {
 	Zip([]byte) ([]byte, error)
 	Unzip([]byte) ([]byte, error)
+}
+
+// 写个map以将四种压缩器和压缩类型对应起来
+var compressors = map[CompressType]Compressor{
+	Raw:    RawCompressor{},
+	Gzip:   GzipCompressor{},
+	Snappy: SnappyCompressor{},
+	Zlib:   ZlibCompressor{},
 }

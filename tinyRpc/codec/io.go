@@ -2,7 +2,7 @@
  * @Author: YangChen
  * @Date: 2022-11-04 16:27:39
  * @Last Modified by: YangChen
- * @Last Modified time: 2022-11-04 19:48:45
+ * @Last Modified time: 2022-11-05 14:35:36
  */
 
 package codec
@@ -31,6 +31,34 @@ func sendFrame(w io.Writer, data []byte) (err error) {
 		return
 	}
 	return
+}
+
+func readFrame(r io.Reader) (data []byte, err error) {
+	size, err := binary.ReadUvarint(r.(io.ByteReader))
+	if err != nil {
+		return nil, err
+	}
+	if size != 0 {
+		data = make([]byte, size)
+		if err = read(r, data); err != nil {
+			return nil, err
+		}
+
+	}
+	return data, nil
+}
+
+func read(r io.Reader, data []byte) error {
+	for index := 0; index < len(data); {
+		n, err := r.Read(data[index:])
+		if err != nil {
+			if _, ok := err.(net.Error); !ok {
+				return err
+			}
+		}
+		index += n
+	}
+	return nil
 }
 
 func write(w io.Writer, data []byte) error {
