@@ -17,6 +17,8 @@ type Context struct {
 	// 请求信息
 	Path   string
 	Method string
+	// 请求参数
+	Params map[string]string
 	// 响应信息
 	StatusCode int
 }
@@ -66,6 +68,11 @@ func (c *Context) String(code int, format string, values ...interface{}) {
 func (c *Context) Data(code int, data []byte) {
 	c.Status(code)
 	c.Writer.Write(data)
+}
+
+func (c *Context) Param(key string) string {
+	value, _ := c.Params[key]
+	return value
 }
 
 func (c *Context) HTML(code int, html string) {
