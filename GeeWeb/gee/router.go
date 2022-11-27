@@ -25,6 +25,7 @@ func parsePattern(pattern string) []string {
 	for _, item := range patternSplit {
 		if item != "" {
 			parts = append(parts, item)
+			// 这里只要接收到一次*号，后面不需要再看了
 			if item[0] == '*' {
 				break
 			}
