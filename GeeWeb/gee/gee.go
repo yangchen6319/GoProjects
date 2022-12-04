@@ -3,6 +3,7 @@ package gee
 import (
 	"log"
 	"net/http"
+	"strings"
 )
 
 // HandleFunc 定义了请求的处理方式
@@ -77,6 +78,11 @@ func (group *RouterGroup) POST(pattern string, handle HandleFunc) {
 	group.addRouter("POST", pattern, handle)
 }
 
+func (group *RouterGroup) AddMiddleware(middlewares ...HandleFunc) {
+	// 向路由分组中添加中间件
+	group.middlewares = append(group.middlewares, middlewares...)
+}
+
 // 这里的方式是通过engine直接添加路由信息
 
 // GET 定义了添加get请求的方法
@@ -97,6 +103,14 @@ func (engine *Engine) Run(addr string) (err error) {
 // 可以在指定拦截所有http请求并处理指定请求，处理方式就是ServeHTTP方法
 // 这是框架的内容，框架使用者只需要写好处理方法HandleFunc放入engine，剩下的事情框架来做
 func (engine *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	var middlewares []HandleFunc
+	for _, group := range engine.groups {
+		if strings.HasPrefix(r.URL.Path, group.prefix) {
+			middlewares = append(middlewares, group.middlewares...)
+		}
+	}
+
 	c := NewContext(w, r)
+	c.handlers = middlewares
 	engine.router.handle(c)
 }

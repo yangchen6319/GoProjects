@@ -2,13 +2,24 @@ package main
 
 import (
 	"gee"
+	"log"
 	"net/http"
+	"time"
 )
+
+func onlyForV2() gee.HandleFunc {
+	return func(c *gee.Context) {
+		t := time.Now()
+		c.Next()
+		log.Printf("[%d] %s in %v for group v2", c.StatusCode, c.Req.RequestURI, time.Since(t))
+	}
+}
 
 func main() {
 	// 实例化一个engine
 	e := gee.New()
-
+	// 加个全局中间件
+	e.AddMiddleware(gee.Logger())
 	v1 := e.Group("/v1")
 	{
 		v1.GET("/", func(c *gee.Context) {
@@ -20,6 +31,7 @@ func main() {
 	}
 
 	v2 := e.Group("/v2")
+	v2.AddMiddleware(onlyForV2())
 	{
 		v2.GET("/hello/:name", func(c *gee.Context) {
 			// expect /hello/geektutu

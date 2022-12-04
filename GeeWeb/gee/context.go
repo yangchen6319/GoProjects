@@ -21,6 +21,9 @@ type Context struct {
 	Params map[string]string
 	// 响应信息
 	StatusCode int
+	// 新增中间件部分
+	handlers []HandleFunc
+	index    int
 }
 
 func NewContext(w http.ResponseWriter, r *http.Request) *Context {
@@ -29,6 +32,7 @@ func NewContext(w http.ResponseWriter, r *http.Request) *Context {
 		Req:    r,
 		Path:   r.URL.Path,
 		Method: r.Method,
+		index:  -1,
 	}
 }
 
@@ -79,4 +83,14 @@ func (c *Context) HTML(code int, html string) {
 	c.SetHeader("Context-Type", "text/html")
 	c.Status(code)
 	c.Writer.Write([]byte(html))
+}
+
+// Next 函数用于执行context中的handles函数列表
+func (c *Context) Next() {
+	c.index++
+	size := len(c.handlers)
+	// 这里可以配合写好的中间件达到按照想要的顺序执行各部分的目的
+	for ; c.index < size; c.index++ {
+		c.handlers[c.index](c)
+	}
 }
