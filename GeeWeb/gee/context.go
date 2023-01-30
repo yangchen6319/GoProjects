@@ -24,6 +24,7 @@ type Context struct {
 	// 新增中间件部分
 	handlers []HandleFunc
 	index    int
+	engine   *Engine // 使Context使用Engine中的模板
 }
 
 func NewContext(w http.ResponseWriter, r *http.Request) *Context {
@@ -79,10 +80,16 @@ func (c *Context) Param(key string) string {
 	return value
 }
 
-func (c *Context) HTML(code int, html string) {
+func (c *Context) HTML(code int, name string, data interface{}) {
 	c.SetHeader("Context-Type", "text/html")
 	c.Status(code)
-	c.Writer.Write([]byte(html))
+	if err := c.engine.htmlTemplates.ExecuteTemplate(c.Writer, name, data); err != nil {
+		c.Fail(500, err)
+	}
+}
+
+func (c *Context) Fail(code int, err error) {
+	c.Status(code)
 }
 
 // Next 函数用于执行context中的handles函数列表

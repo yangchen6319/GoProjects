@@ -1,8 +1,10 @@
 package gee
 
 import (
+	"html/template"
 	"log"
 	"net/http"
+	"path"
 	"strings"
 )
 
@@ -30,6 +32,9 @@ type Engine struct {
 	// 全部采用指针形式意味着engin可以调用任意的RouterGroup实例
 	groups []*RouterGroup
 	router *router
+	// template
+	htmlTemplates *template.Template
+	funcMap       template.FuncMap
 }
 
 // New 是Engine的构造方法
@@ -83,6 +88,25 @@ func (group *RouterGroup) AddMiddleware(middlewares ...HandleFunc) {
 	group.middlewares = append(group.middlewares, middlewares...)
 }
 
+func (group *RouterGroup) createStaticHandle(relativePath string, fs http.FileSystem) HandleFunc {
+	absolutePath := path.Join(group.prefix, relativePath)
+	fileServer := http.StripPrefix(absolutePath, http.FileServer(fs))
+	return func(c *Context) {
+		file := c.Param("filepath")
+		if _, err := fs.Open(file); err != nil {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		fileServer.ServeHTTP(c.Writer, c.Req)
+	}
+}
+
+func (group *RouterGroup) Static(relativePath string, root string) {
+	handler := group.createStaticHandle(relativePath, http.Dir(root))
+	urlPattern := path.Join(relativePath, "/*filepath")
+	group.GET(urlPattern, handler)
+}
+
 // 这里的方式是通过engine直接添加路由信息
 
 // GET 定义了添加get请求的方法
@@ -99,6 +123,16 @@ func (engine *Engine) Run(addr string) (err error) {
 	return http.ListenAndServe(addr, engine)
 }
 
+// Engine中添加有关路由的方法
+
+func (engine *Engine) SetFuncMap(funcMap template.FuncMap) {
+	engine.funcMap = funcMap
+}
+
+func (engine *Engine) LoadHTMLGlob(pattern string) {
+	engine.htmlTemplates = template.Must(template.New("").Funcs(engine.funcMap).ParseGlob(pattern))
+}
+
 // ServeHTTP 方法，实现该方法使得Engine结构体可以作为Handle类，启动服务器并放入Handle实例，
 // 可以在指定拦截所有http请求并处理指定请求，处理方式就是ServeHTTP方法
 // 这是框架的内容，框架使用者只需要写好处理方法HandleFunc放入engine，剩下的事情框架来做
@@ -112,5 +146,6 @@ func (engine *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	c := NewContext(w, r)
 	c.handlers = middlewares
+	c.engine = engine
 	engine.router.handle(c)
 }
